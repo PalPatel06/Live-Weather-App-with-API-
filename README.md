@@ -1,12 +1,10 @@
 Live Weather Dashboard
 
-This is a clean, modern, and responsive web application that provides real-time weather data for any city in the world. It utilizes the OpenWeatherMap API to fetch current weather conditions and a 5-day forecast.
+This is a clean, modern, and responsive web application that provides real-time weather data for any city in the world. It utilizes the OpenWeatherMap API to fetch current weather conditions.
 
 Features
 
 Current Weather: Get up-to-the-minute data on temperature, "feels like" temperature, humidity, wind speed, and a general weather description (e.g., "Clear sky," "Light rain").
-
-5-Day Forecast: View a detailed forecast for the next five days, including high/low temperatures and weather conditions.
 
 City Search: Easily search for any city worldwide to get its weather information.
 
