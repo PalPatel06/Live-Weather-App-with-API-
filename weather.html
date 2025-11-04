@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Weather App</title>
+    
+    <!-- Import a modern font --><link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Styles for the weather app --><style>
+        /* --- 1. GLOBAL RESET & BASIC STYLES --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(to top right, #3a7bd5, #3a6073); /* Cool blue background */
+            padding: 20px;
+        }
+
+        /* --- 2. WEATHER CARD STYLING --- */
+        .weather-card {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.1); /* Glassmorphism background */
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            color: white;
+            text-align: center;
+        }
+
+        /* --- 3. SEARCH BAR STYLING --- */
+        .search {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .search input {
+            flex-grow: 1; /* Allows input to take available space */
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .search input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .search input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.7);
+        }
+
+        .search button {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: white;
+            color: #3a7bd5;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .search button:hover {
+            background: #f0f0f0;
+        }
+
+        /* --- 4. WEATHER DISPLAY STYLING --- */
+        .weather-display {
+            /* This will be hidden until a search is made */
+            display: none; 
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .weather-icon {
+            width: 100px; /* Standard size for OpenWeatherMap icons */
+            height: 100px; /* Standard size for OpenWeatherMap icons */
+            margin: 0 auto;
+        }
+
+        .temperature {
+            font-size: 4rem; /* 64px */
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .description {
+            font-size: 1.25rem; /* 20px */
+            font-weight: 500;
+            text-transform: capitalize;
+            margin-bottom: 5px;
+        }
+
+        .city {
+            font-size: 1.1rem; /* 18px */
+            font-weight: 400;
+        }
+        
+        /* --- 5. ERROR MESSAGE --- */
+        .error {
+            display: none;
+            color: #ffcdd2; /* Light red for error */
+            margin-top: 15px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- HTML Structure for the Weather Card --><div class="weather-card">
+        
+        <!-- Search Bar --><div class="search">
+            <input type="text" id="city-input" placeholder="Enter city name...">
+            <button id="search-btn">Go</button>
+        </div>
+
+        <!-- Error Message Display --><p class="error" id="error-message"></p>
+
+        <!-- Weather Display (Hidden by default) --><div class="weather-display" id="weather-display">
+            <!-- The src attribute will be dynamically updated by JavaScript --><img src="" alt="Weather Icon" class="weather-icon" id="weather-icon">
+            <h1 class="temperature" id="temperature"></h1>
+            <p class="description" id="description"></p>
+            <p class="city" id="city"></p>
+        </div>
+        
+    </div>
+
+    <!-- JavaScript for API fetching and DOM manipulation --><script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // --- 1. API key is now added ---
+            const apiKey = '20b26929c422d62de75eb0cda1953632'; // <-- API Key Added!
+            
+            // --- 2. Get DOM Elements ---
+            const cityInput = document.getElementById('city-input');
+            const searchBtn = document.getElementById('search-btn');
+            const weatherDisplay = document.getElementById('weather-display');
+            const errorMessage = document.getElementById('error-message');
+
+            // Display elements
+            const weatherIcon = document.getElementById('weather-icon');
+            const temperature = document.getElementById('temperature');
+            const description = document.getElementById('description');
+            const city = document.getElementById('city');
+
+            // --- 3. Add Event Listener for the search button ---
+            searchBtn.addEventListener('click', getWeather);
+            
+            // Allow pressing 'Enter' to search
+            cityInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    getWeather();
+                }
+            });
+
+            // --- 4. Main function to fetch weather ---
+            function getWeather() {
+                const cityName = cityInput.value.trim();
+
+                // Check for API Key
+                if (apiKey === 'YOUR_API_KEY_HERE' || apiKey === '') {
+                    displayError("Please add your OpenWeatherMap API key to the script.");
+                    return;
+                }
+
+                // Check for empty city input
+                if (cityName === '') {
+                    displayError("Please enter a city name.");
+                    return;
+                }
+
+                const apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${cityName}&appid=${apiKey}&units=metric`;
+
+                // Reset UI
+                hideError();
+                weatherDisplay.style.display = 'none';
+
+                // Fetch data from the API
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            // If response is not 200 OK
+                            // Check for 404 specifically for "city not found"
+                            if (response.status === 404) {
+                                throw new Error('City not found. Please check the spelling.');
+                            }
+                            // Generic error for other issues
+                            throw new Error(`Error: ${response.status} ${response.statusText}`);
+                        }
+                        return response.json(); // Parse the JSON data
+                    })
+                    .then(data => {
+                        // We have the data, now update the UI
+                        updateWeatherUI(data);
+                    })
+                    .catch(error => {
+                        // Handle any errors (city not found, network issues, API key issues)
+                        displayError(error.message);
+                    });
+            }
+
+            // --- 5. Function to update the UI with fetched data ---
+            function updateWeatherUI(data) {
+                // Extract data
+                const temp = `${Math.round(data.main.temp)}°C`;
+                const desc = data.weather[0].description;
+                const cityName = data.name;
+                const country = data.sys.country;
+                const iconCode = data.weather[0].icon;
+                
+                // *** This is the key change for better icons! ***
+                const iconUrl = `https://openweathermap.org/img/wn/${iconCode}@2x.png`; 
+
+                // Update the DOM
+                temperature.textContent = temp;
+                description.textContent = desc;
+                city.textContent = `${cityName}, ${country}`;
+                weatherIcon.src = iconUrl;
+                weatherIcon.alt = desc; // Set alt text for accessibility
+
+                // Show the weather display
+                weatherDisplay.style.display = 'block';
+            }
+
+            // --- 6. Helper functions for errors ---
+            function displayError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+
+            function hideError() {
+                errorMessage.textContent = '';
+                errorMessage.style.display = 'none';
+            }
+
+        });
+    </script>
+
+</body>
+</html>
